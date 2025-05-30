@@ -83,10 +83,15 @@ export default function FlappyBirdGame() {
   const dieSound = useRef<HTMLAudioElement | null>(null);
   useEffect(() => {
     wingSound.current = new window.Audio("/audio/sfx_wing.wav");
+    if (wingSound.current) wingSound.current.volume = 0.5;
     swooshSound.current = new window.Audio("/audio/sfx_swooshing.wav");
+    if (swooshSound.current) swooshSound.current.volume = 0.5;
     pointSound.current = new window.Audio("/audio/sfx_point.wav");
+    if (pointSound.current) pointSound.current.volume = 0.5;
     hitSound.current = new window.Audio("/audio/sfx_hit.wav");
+    if (hitSound.current) hitSound.current.volume = 0.5;
     dieSound.current = new window.Audio("/audio/sfx_die.wav");
+    if (dieSound.current) dieSound.current.volume = 0.5;
   }, []);
 
   // Game loop
@@ -96,14 +101,14 @@ export default function FlappyBirdGame() {
     setScore(0);
     birdY.current = height / 2;
     birdV.current = 0;
-    let pipeSpeed = 1.5;
-    let speedTimer = 0;
+    const pipeSpeed = 2.5; // Constant, faster speed
     function randomPipeColor() {
       return Math.random() < 0.5 ? "green" : "red";
     }
+    const minGap = birdSize * 5;
     pipes.current = [
-      { x: width + 100, top: Math.max(60, Math.random() * (height - pipeGap - groundHeight - 100) + 50), color: randomPipeColor(), passed: false },
-      { x: width + 100 + 200, top: Math.max(60, Math.random() * (height - pipeGap - groundHeight - 100) + 50), color: randomPipeColor(), passed: false },
+      { x: width + 100, top: Math.max(60, Math.random() * (height - minGap - groundHeight - 100) + 50), color: randomPipeColor(), passed: false },
+      { x: width + 100 + 200, top: Math.max(60, Math.random() * (height - minGap - groundHeight - 100) + 50), color: randomPipeColor(), passed: false },
     ];
     startedRef.current = true;
     gameOverRef.current = false;
@@ -164,34 +169,29 @@ export default function FlappyBirdGame() {
         ctx.fillStyle = "#b0a14f";
         ctx.fillRect(0, height - groundHeight, width, 10);
       }
-      // Draw custom game over UI with fade-in
+      // Draw game over UI (simple, no overlays, no fade)
       if (isGameOver) {
-        // Fade in game-over.png
-        if (gameOverImg.current?.complete) {
-          ctx.save();
-          ctx.globalAlpha = gameOverFade;
+        // Draw game over image centered
+        if (gameOverImg.current?.complete && gameOverImg.current.naturalWidth > 0) {
           const imgW = width * 0.7;
           const imgH = imgW * (gameOverImg.current.height / gameOverImg.current.width);
           ctx.drawImage(gameOverImg.current, width / 2 - imgW / 2, height * 0.18, imgW, imgH);
-          ctx.globalAlpha = 1.0;
-          ctx.restore();
-        }
-        // Fade in scores and yellow message after image
-        if (showGameOverDetails) {
-          ctx.save();
-          ctx.globalAlpha = Math.min(1, (gameOverFade - 0.7) / 0.3 + 1); // quick fade in after image
-          ctx.font = `${Math.round(height * 0.045)}px Arial Black, Arial, 'Geist', sans-serif`;
-          ctx.fillStyle = '#fff';
+        } else {
+          ctx.font = `bold ${Math.round(height * 0.055)}px Arial Black, Arial, 'Geist', sans-serif`;
+          ctx.fillStyle = "#ff3b3b";
           ctx.textAlign = 'center';
-          ctx.fillText(`Score: ${score}`, width / 2, height * 0.18 + (width * 0.7) * (gameOverImg.current?.height || 1) / (gameOverImg.current?.width || 1) + 50);
-          const best = Number(localStorage.getItem('bestScore') || 0);
-          ctx.fillText(`Best: ${best}`, width / 2, height * 0.18 + (width * 0.7) * (gameOverImg.current?.height || 1) / (gameOverImg.current?.width || 1) + 90);
-          ctx.font = `${Math.round(height * 0.025)}px Arial`;
-          ctx.fillStyle = '#ffe066';
-          ctx.fillText('Double tap to restart', width / 2, height * 0.18 + (width * 0.7) * (gameOverImg.current?.height || 1) / (gameOverImg.current?.width || 1) + 130);
-          ctx.globalAlpha = 1.0;
-          ctx.restore();
+          ctx.fillText("Game Over!", width / 2, height * 0.25);
         }
+        // Show scores and yellow message
+        ctx.font = `${Math.round(height * 0.045)}px Arial Black, Arial, 'Geist', sans-serif`;
+        ctx.fillStyle = '#fff';
+        ctx.textAlign = 'center';
+        ctx.fillText(`Score: ${score}`, width / 2, height * 0.18 + (width * 0.7) * (gameOverImg.current?.height || 1) / (gameOverImg.current?.width || 1) + 50);
+        const best = Number(localStorage.getItem('bestScore') || 0);
+        ctx.fillText(`Best: ${best}`, width / 2, height * 0.18 + (width * 0.7) * (gameOverImg.current?.height || 1) / (gameOverImg.current?.width || 1) + 90);
+        ctx.font = `${Math.round(height * 0.025)}px Arial`;
+        ctx.fillStyle = '#ffe066';
+        ctx.fillText('Double tap to restart', width / 2, height * 0.18 + (width * 0.7) * (gameOverImg.current?.height || 1) / (gameOverImg.current?.width || 1) + 130);
       }
       // Draw score last (highest z-index)
       if (showScore) {
@@ -213,14 +213,7 @@ export default function FlappyBirdGame() {
     function update() {
       birdV.current += gravity;
       birdY.current += birdV.current;
-      pipes.current.forEach(pipe => (pipe.x -= pipeSpeed));
-      // Gradually speed up every 10s
-      speedTimer += 1 / 60;
-      if (speedTimer > 10 && pipeSpeed < 3.5) {
-        pipeSpeed += 0.2;
-        speedTimer = 0;
-      }
-      // Score: only increment when bird's right edge passes pipe's right edge
+      pipes.current.forEach(pipe => (pipe.x -= pipeSpeed)); // Use constant speed
       pipes.current.forEach(pipe => {
         if (!pipe.passed && (width / 4 + birdSize / 2 > pipe.x + pipeWidth)) {
           pipe.passed = true;
@@ -238,7 +231,7 @@ export default function FlappyBirdGame() {
         pipes.current.shift();
         pipes.current.push({
           x: width,
-          top: Math.max(60, Math.random() * (height - pipeGap - groundHeight - 100) + 50),
+          top: Math.max(60, Math.random() * (height - minGap - groundHeight - 100) + 50),
           color: Math.random() < 0.5 ? "green" : "red",
           passed: false
         });
@@ -257,7 +250,7 @@ export default function FlappyBirdGame() {
         if (
           birdBox.x + birdBox.w > pipe.x &&
           birdBox.x < pipe.x + pipeWidth &&
-          (birdBox.y < pipe.top || birdBox.y + birdBox.h > pipe.top + pipeGap)
+          (birdBox.y < pipe.top || birdBox.y + birdBox.h > pipe.top + minGap)
         ) {
           gameOverRef.current = true;
           startedRef.current = false;
@@ -309,15 +302,23 @@ export default function FlappyBirdGame() {
     // eslint-disable-next-line
   }, [started]);
 
-  // Handle jump
+  // Handle jump (works for all input types)
   const handleJump = useCallback(() => {
     if (!startedRef.current) return;
     birdV.current = jump;
+    // Play wing sound
     if (wingSound.current) {
-      wingSound.current.currentTime = 0;
-      wingSound.current.play();
+      try {
+        wingSound.current.currentTime = 0;
+        wingSound.current.play();
+        console.log('Wing sound played');
+      } catch (err) {
+        console.log('Wing sound play error:', err);
+      }
+    } else {
+      console.log('Wing sound not loaded');
     }
-  }, []);
+  }, [jump]);
 
   // Start game
   const handleStart = () => {
@@ -416,21 +417,18 @@ export default function FlappyBirdGame() {
     if (!canvas) return;
     const handleClick = () => {
       const rect = canvas.getBoundingClientRect();
-      const x = rect.left;
-      const y = rect.top;
       const btn = (canvas as CanvasWithRestartBtn)?._restartBtn;
-      if (gameOver && btn && x >= btn.x && x <= btn.x + btn.w && y >= btn.y && y <= btn.y + btn.h) {
+      if (gameOver && btn) {
         setStarted(true); setGameOver(false); setScore(0);
       } else if (!started) {
         setStarted(true); setGameOver(false); setScore(0);
       } else if (started) {
-        // Jump
-        birdV.current = jump;
+        handleJump(); // Use handleJump for mouse click
       }
     };
     canvas.addEventListener("click", handleClick);
     return () => canvas.removeEventListener("click", handleClick);
-  }, [gameOver, started, jump]);
+  }, [gameOver, started, jump, handleJump]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -438,16 +436,14 @@ export default function FlappyBirdGame() {
     const handleTouchEnd = () => {
       const now = Date.now();
       if (now - lastTap < 400) {
-        // Double tap
         setStarted(true); setGameOver(false); setScore(0);
       }
       setLastTap(now);
-      // Single tap = jump
-      if (started) birdV.current = jump;
+      if (started) handleJump(); // Use handleJump for tap
     };
     canvas.addEventListener("touchstart", handleTouchEnd);
     return () => canvas.removeEventListener("touchstart", handleTouchEnd);
-  }, [lastTap, started, jump]);
+  }, [lastTap, started, jump, handleJump]);
 
   // Animate game over fade-in
   useEffect(() => {
