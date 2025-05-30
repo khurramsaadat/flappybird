@@ -1,7 +1,6 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
-
-const GAME_GUIDE = `Play flappy bird here online for free. Click on the screen, or use your spacebar to get started. Fly the bird as far as you can without hitting a pipe.`;
+import { useEffect, useRef, useState, useCallback } from "react";
+import Image from "next/image";
 
 export default function FlappyBirdGame() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -257,14 +256,14 @@ export default function FlappyBirdGame() {
   }, [started]);
 
   // Handle jump
-  const handleJump = () => {
+  const handleJump = useCallback(() => {
     if (!startedRef.current) return;
     birdV.current = jump;
     if (wingSound.current) {
       wingSound.current.currentTime = 0;
       wingSound.current.play();
     }
-  };
+  }, []);
 
   // Start game
   const handleStart = () => {
@@ -288,7 +287,7 @@ export default function FlappyBirdGame() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [gameOver]);
+  }, [gameOver, handleJump]);
 
   // Responsive canvas scaling
   useEffect(() => {
@@ -318,9 +317,10 @@ export default function FlappyBirdGame() {
         <div className="relative w-full flex justify-center">
           {/* Show start background image overlay if not started and not gameOver */}
           {!started && !gameOver && startBg.current?.complete && (
-            <img
+            <Image
               src="/images/screenshot.png"
               alt="Start Screen"
+              fill
               className="absolute left-0 top-0 w-full h-full object-cover z-10 rounded-lg"
               style={{ maxWidth: width, maxHeight: height }}
             />
