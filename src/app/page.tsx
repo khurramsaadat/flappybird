@@ -8,16 +8,21 @@ export default function FlappyBirdGame() {
   const [gameOver, setGameOver] = useState(false);
   const [started, setStarted] = useState(false);
   const [showTap, setShowTap] = useState(true);
+  const [canvasSize, setCanvasSize] = useState({ width: 400, height: 600 });
+  const [isMobile, setIsMobile] = useState(false);
+  const [lastTap, setLastTap] = useState(0);
+  const [showScore, setShowScore] = useState(false);
+  const scoreTimeout = useRef<NodeJS.Timeout | null>(null);
 
-  // Game constants
-  const width = 400;
-  const height = 600;
-  const gravity = 0.35;
-  const jump = -6;
-  const birdSize = 40;
-  const pipeWidth = 60;
-  const pipeGap = 200;
-  const groundHeight = 60;
+  // Game constants (will be updated based on canvas size)
+  let width = canvasSize.width;
+  let height = canvasSize.height;
+  const gravity = 0.35 * (height / 600);
+  const jump = -6 * (height / 600);
+  const birdSize = 40 * (height / 600);
+  const pipeWidth = 60 * (height / 600);
+  const pipeGap = 200 * (height / 600);
+  const groundHeight = 60 * (height / 600);
 
   // Game state
   const birdY = useRef(height / 2);
@@ -34,8 +39,8 @@ export default function FlappyBirdGame() {
   const pipeGreenBottom = useRef<HTMLImageElement | null>(null);
   const pipeRedTop = useRef<HTMLImageElement | null>(null);
   const pipeRedBottom = useRef<HTMLImageElement | null>(null);
-  const startBg = useRef<HTMLImageElement | null>(null);
   const baseImg = useRef<HTMLImageElement | null>(null);
+  const bgImg = useRef<HTMLImageElement | null>(null);
   useEffect(() => {
     const img = new window.Image();
     img.src = "/flappy.png";
@@ -52,12 +57,12 @@ export default function FlappyBirdGame() {
     const rBot = new window.Image();
     rBot.src = "/images/pipe_red_bottom.png";
     pipeRedBottom.current = rBot;
-    const bg = new window.Image();
-    bg.src = "/images/screenshot.png";
-    startBg.current = bg;
     const base = new window.Image();
     base.src = "/images/base.png";
     baseImg.current = base;
+    const bg = new window.Image();
+    bg.src = "/images/background.jpg";
+    bgImg.current = bg;
   }, []);
 
   // Load sounds
@@ -99,9 +104,30 @@ export default function FlappyBirdGame() {
 
     function draw() {
       if (!ctx) return;
-      // Sky background
-      ctx.fillStyle = "#87ceeb";
-      ctx.fillRect(0, 0, width, height);
+      // Always draw background image first
+      if (bgImg.current?.complete) {
+        ctx.drawImage(bgImg.current, 0, 0, width, height);
+        console.log("Drawing background image");
+      } else {
+        ctx.fillStyle = "#87ceeb";
+        ctx.fillRect(0, 0, width, height);
+        console.log("Drawing fallback blue background");
+      }
+      // Draw score only when showScore is true
+      if (showScore) {
+        ctx.save();
+        ctx.fillStyle = "rgba(0,0,0,0.3)";
+        ctx.fillRect(width/2-40, height*0.07-40, 80, 60); // debug background
+        ctx.font = `bold ${Math.round(height * 0.07)}px Arial Black, Arial, 'Geist', sans-serif`;
+        ctx.fillStyle = "#fff";
+        ctx.strokeStyle = "#222";
+        ctx.lineWidth = 4;
+        ctx.textAlign = "center";
+        ctx.strokeText(score.toString(), width / 2, height * 0.12);
+        ctx.fillText(score.toString(), width / 2, height * 0.12);
+        ctx.restore();
+        console.log("Drawing score:", score);
+      }
       // Pipes (with images)
       pipes.current.forEach(pipe => {
         const isGreen = pipe.color === "green";
@@ -131,23 +157,6 @@ export default function FlappyBirdGame() {
         ctx.arc(width / 4, birdY.current + birdSize / 2, birdSize / 2, 0, 2 * Math.PI);
         ctx.fill();
       }
-      // Score (big, white, centered)
-      ctx.fillStyle = "#fff";
-      ctx.strokeStyle = "#222";
-      ctx.lineWidth = 4;
-      ctx.font = "bold 48px Arial";
-      ctx.textAlign = "center";
-      ctx.strokeText(score.toString(), width / 2, 80);
-      ctx.fillText(score.toString(), width / 2, 80);
-      // TAP indicator
-      if (!started && !gameOver && showTap) {
-        ctx.font = "bold 24px Arial";
-        ctx.fillStyle = "#ff5722";
-        ctx.fillText("TAP", width / 2 + 40, height / 2);
-        ctx.font = "32px Arial";
-        ctx.fillStyle = "#fff";
-        ctx.fillText("🖱️", width / 2, height / 2 + 40);
-      }
       // Draw base (in front of pipes)
       if (baseImg.current?.complete) {
         ctx.drawImage(baseImg.current, 0, height - groundHeight, width, groundHeight);
@@ -174,6 +183,9 @@ export default function FlappyBirdGame() {
         if (!pipe.passed && (width / 4 + birdSize / 2 > pipe.x + pipeWidth)) {
           pipe.passed = true;
           setScore(s => s + 1);
+          setShowScore(true);
+          if (scoreTimeout.current) clearTimeout(scoreTimeout.current);
+          scoreTimeout.current = setTimeout(() => setShowScore(false), 1000);
           if (pointSound.current) {
             pointSound.current.currentTime = 0;
             pointSound.current.play();
@@ -291,72 +303,167 @@ export default function FlappyBirdGame() {
 
   // Responsive canvas scaling
   useEffect(() => {
-    const resize = () => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const parent = canvas.parentElement;
-      if (!parent) return;
-      const scale = Math.min(
-        parent.offsetWidth / width,
-        window.innerHeight * 0.7 / height,
-        1
+    function handleResize() {
+      const isMobileDevice = window.innerWidth < 768;
+      setIsMobile(isMobileDevice);
+      if (isMobileDevice) {
+        setCanvasSize({ width: window.innerWidth, height: window.innerHeight });
+      } else {
+        // Desktop: full viewport height, proportional width
+        const aspect = 400 / 600;
+        const vh = window.innerHeight;
+        const vw = Math.min(window.innerWidth, vh * aspect);
+        setCanvasSize({ width: vw, height: vh });
+      }
+    }
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Draw everything in canvas
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    // Draw background (always, for all states)
+    if (bgImg.current?.complete) {
+      ctx.drawImage(bgImg.current, 0, 0, width, height);
+    } else {
+      ctx.fillStyle = "#87ceeb";
+      ctx.fillRect(0, 0, width, height);
+    }
+    // Dim background for start/game over screens
+    if (!started || gameOver) {
+      ctx.save();
+      ctx.globalAlpha = 0.25;
+      ctx.fillStyle = "#000";
+      ctx.fillRect(0, 0, width, height);
+      ctx.globalAlpha = 1.0;
+      ctx.restore();
+    }
+    // ... draw pipes, bird, base as before ...
+    // Draw UI (controls, messages, buttons) inside canvas
+    ctx.save();
+    ctx.textAlign = "center";
+    // Controls (only on start, not on game over)
+    if (!started && !gameOver) {
+      ctx.font = `${Math.round(height * 0.03)}px Arial`;
+      ctx.fillStyle = "#fff";
+      ctx.fillText(
+        isMobile
+          ? "Controls: Tap to jump, double tap to restart"
+          : "Controls: Space/Click to jump, R to restart",
+        width / 2,
+        height * 0.08
       );
-      canvas.style.transform = `scale(${scale})`;
-      canvas.style.transformOrigin = "top left";
-      canvas.style.display = "block";
-      canvas.style.margin = "0 auto";
+    }
+    // Game Over
+    if (gameOver) {
+      ctx.font = `bold ${Math.round(height * 0.055)}px Arial Black, Arial, 'Geist', sans-serif`;
+      ctx.fillStyle = "#ff3b3b";
+      ctx.fillText("Game Over!", width / 2, height * 0.25);
+      // Restart button
+      const btnW = width * 0.35;
+      const btnH = height * 0.08;
+      const btnX = width / 2 - btnW / 2;
+      const btnY = height * 0.32;
+      ctx.fillStyle = "#22c55e";
+      ctx.fillRect(btnX, btnY, btnW, btnH);
+      ctx.font = `${Math.round(height * 0.045)}px Arial`;
+      ctx.fillStyle = "#fff";
+      ctx.fillText("Restart", width / 2, btnY + btnH / 2 + height * 0.015);
+      // Double tap to restart
+      ctx.font = `${Math.round(height * 0.025)}px Arial`;
+      ctx.fillStyle = "#fff";
+      ctx.fillText("Double tap to restart", width / 2, btnY + btnH + height * 0.04);
+      // Store button bounds for click/tap detection
+      (canvas as any)._restartBtn = { x: btnX, y: btnY, w: btnW, h: btnH };
+    } else {
+      (canvas as any)._restartBtn = null;
+    }
+    // Start screen controls
+    if (!started && !gameOver) {
+      ctx.font = `${Math.round(height * 0.045)}px Arial`;
+      ctx.fillStyle = "#22c55e";
+      ctx.fillText("Tap/Click to Start", width / 2, height * 0.5);
+    }
+    ctx.restore();
+  }, [canvasSize, started, gameOver, isMobile]);
+
+  // Update event handlers for canvas clicks/taps
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const handleClick = (e: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const btn = (canvas as any)?._restartBtn;
+      if (gameOver && btn && x >= btn.x && x <= btn.x + btn.w && y >= btn.y && y <= btn.y + btn.h) {
+        setStarted(true); setGameOver(false); setScore(0);
+      } else if (!started) {
+        setStarted(true); setGameOver(false); setScore(0);
+      } else if (started) {
+        // Jump
+        birdV.current = jump;
+      }
     };
-    resize();
-    window.addEventListener("resize", resize);
-    return () => window.removeEventListener("resize", resize);
+    canvas.addEventListener("click", handleClick);
+    return () => canvas.removeEventListener("click", handleClick);
+  }, []);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const handleTouchEnd = (e: TouchEvent) => {
+      const now = Date.now();
+      if (now - lastTap < 400) {
+        // Double tap
+        setStarted(true); setGameOver(false); setScore(0);
+      }
+      setLastTap(now);
+      // Single tap = jump
+      if (started) birdV.current = jump;
+    };
+    canvas.addEventListener("touchstart", handleTouchEnd);
+    return () => canvas.removeEventListener("touchstart", handleTouchEnd);
   }, []);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-blue-200 to-blue-400 px-2 py-4">
-      <div className="flex flex-col items-center w-full" style={{ maxWidth: width }}>
-        <div className="relative w-full flex justify-center">
-          {/* Show start background image overlay if not started and not gameOver */}
-          {!started && !gameOver && startBg.current?.complete && (
-            <Image
-              src="/images/screenshot.png"
-              alt="Start Screen"
-              fill
-              className="absolute left-0 top-0 w-full h-full object-cover z-10 rounded-lg"
-              style={{ maxWidth: width, maxHeight: height }}
-            />
-          )}
-          <canvas
-            ref={canvasRef}
-            width={width}
-            height={height}
-            tabIndex={0}
-            className="border-4 border-blue-500 rounded-lg bg-white outline-none focus:ring-2 focus:ring-blue-700"
-            onClick={() => (started ? handleJump() : handleStart())}
-            style={{ width: "100%", height: "auto", maxWidth: width, background: "#87ceeb" }}
-          />
-          {!started && !gameOver && (
-            <button
-              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 px-8 py-3 bg-green-500 text-white rounded shadow hover:bg-green-600 text-lg font-bold z-20"
-              onClick={handleStart}
-              style={{ minWidth: 120 }}
-            >
-              Start
-            </button>
-          )}
-        </div>
-        <div className="mt-2 text-gray-700 text-sm text-center">Controls: <b>Space/Click</b> to jump, <b>R</b> to restart</div>
-      </div>
-      {gameOver && (
-        <div className="mt-6 flex flex-col items-center">
-          <div className="text-2xl font-bold text-red-600 mb-2">Game Over!</div>
-          <button
-            className="px-6 py-2 bg-green-500 text-white rounded shadow hover:bg-green-600"
-            onClick={handleStart}
-          >
-            Restart
-          </button>
-        </div>
-      )}
+    <div style={{ width: "100vw", height: "100vh", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", background: "#222" }}>
+      <canvas
+        ref={canvasRef}
+        width={canvasSize.width}
+        height={canvasSize.height}
+        tabIndex={0}
+        style={{ display: "block", background: "#000", width: canvasSize.width, height: canvasSize.height }}
+        onClick={e => {
+          const rect = canvasRef.current?.getBoundingClientRect();
+          const x = e.clientX - (rect?.left || 0);
+          const y = e.clientY - (rect?.top || 0);
+          const btn = (canvasRef.current as any)?._restartBtn;
+          if (gameOver && btn && x >= btn.x && x <= btn.x + btn.w && y >= btn.y && y <= btn.y + btn.h) {
+            setStarted(true); setGameOver(false); setScore(0);
+          } else if (!started) {
+            setStarted(true); setGameOver(false); setScore(0);
+          } else if (started) {
+            // Jump
+            birdV.current = jump;
+          }
+        }}
+        onTouchEnd={e => {
+          const now = Date.now();
+          if (now - lastTap < 400) {
+            // Double tap
+            setStarted(true); setGameOver(false); setScore(0);
+          }
+          setLastTap(now);
+          // Single tap = jump
+          if (started) birdV.current = jump;
+        }}
+      />
     </div>
   );
 }
