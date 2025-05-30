@@ -8,6 +8,10 @@
 - Replaced all <img> tags with Next.js <Image /> component for all images, including game assets, for better optimization and to resolve ESLint warnings.
 - Removed unused GAME_GUIDE variable from page.tsx.
 - Used useCallback for handleJump and updated useEffect dependencies accordingly.
+- Refactored game over logic to use ref for instant state updates.
+- Attempted to implement fade-in animation for game-over.png and sequential fade for scores/message (not yet working as intended).
+- Removed debug overlays and alerts from draw function.
+- Fallback 'Game Over!' red text and message still showing; further work needed to fully remove and unify custom UI.
 
 ### Directory and File Structure
 

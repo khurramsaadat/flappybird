@@ -377,7 +377,7 @@ export default function FlappyBirdGame() {
       ctx.fillRect(0, 0, width, height);
     }
     // Dim background for start/game over screens
-    if (!started || gameOver) {
+    if (!started) {
       ctx.save();
       ctx.globalAlpha = 0.25;
       ctx.fillStyle = "#000";
@@ -401,20 +401,6 @@ export default function FlappyBirdGame() {
         height * 0.08
       );
     }
-    // Game Over
-    if (gameOver) {
-      ctx.font = `bold ${Math.round(height * 0.055)}px Arial Black, Arial, 'Geist', sans-serif`;
-      ctx.fillStyle = "#ff3b3b";
-      ctx.fillText("Game Over!", width / 2, height * 0.25);
-      // Double tap to restart
-      ctx.font = `${Math.round(height * 0.025)}px Arial`;
-      ctx.fillStyle = "#fff";
-      ctx.fillText("Double tap to restart", width / 2, height * 0.32);
-      // Store button bounds for click/tap detection
-      (canvas as CanvasWithRestartBtn)._restartBtn = { x: 0, y: 0, w: 0, h: 0 };
-    } else {
-      (canvas as CanvasWithRestartBtn)._restartBtn = undefined;
-    }
     // Start screen controls
     if (!started && !gameOver) {
       ctx.font = `${Math.round(height * 0.045)}px Arial`;
@@ -428,10 +414,10 @@ export default function FlappyBirdGame() {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const handleClick = (e: MouseEvent) => {
+    const handleClick = () => {
       const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
+      const x = rect.left;
+      const y = rect.top;
       const btn = (canvas as CanvasWithRestartBtn)?._restartBtn;
       if (gameOver && btn && x >= btn.x && x <= btn.x + btn.w && y >= btn.y && y <= btn.y + btn.h) {
         setStarted(true); setGameOver(false); setScore(0);
@@ -444,12 +430,12 @@ export default function FlappyBirdGame() {
     };
     canvas.addEventListener("click", handleClick);
     return () => canvas.removeEventListener("click", handleClick);
-  }, []);
+  }, [gameOver, started, jump]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const handleTouchEnd = (e: TouchEvent) => {
+    const handleTouchEnd = () => {
       const now = Date.now();
       if (now - lastTap < 400) {
         // Double tap
@@ -461,7 +447,7 @@ export default function FlappyBirdGame() {
     };
     canvas.addEventListener("touchstart", handleTouchEnd);
     return () => canvas.removeEventListener("touchstart", handleTouchEnd);
-  }, []);
+  }, [lastTap, started, jump]);
 
   // Animate game over fade-in
   useEffect(() => {
@@ -495,10 +481,10 @@ export default function FlappyBirdGame() {
         height={canvasSize.height}
         tabIndex={0}
         style={{ display: "block", background: "#000", width: canvasSize.width, height: canvasSize.height }}
-        onClick={e => {
+        onClick={() => {
           const rect = canvasRef.current?.getBoundingClientRect();
-          const x = e.clientX - (rect?.left || 0);
-          const y = e.clientY - (rect?.top || 0);
+          const x = rect?.left || 0;
+          const y = rect?.top || 0;
           const btn = (canvasRef.current as CanvasWithRestartBtn)?._restartBtn;
           if (gameOver && btn && x >= btn.x && x <= btn.x + btn.w && y >= btn.y && y <= btn.y + btn.h) {
             setStarted(true); setGameOver(false); setScore(0);
@@ -509,7 +495,7 @@ export default function FlappyBirdGame() {
             birdV.current = jump;
           }
         }}
-        onTouchEnd={e => {
+        onTouchEnd={() => {
           const now = Date.now();
           if (now - lastTap < 400) {
             // Double tap
