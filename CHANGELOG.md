@@ -19,6 +19,9 @@
 - Made bird rotation smooth and natural using lerp interpolation, keeping max angle at 30 degrees.
 - Cleaned up `public/` directory and code for production.
 - Updated directory structure to reflect `favicon.svg` and removal of `favicon.ico`.
+- Removed unused variables (`showScore`, `isGameOver`) and all related logic for code cleanliness and Netlify build success.
+- Fixed linter errors by ensuring `ctx` is not null before use in the draw function.
+- Updated useEffect dependency array for responsive canvas scaling to include both `height` and `width`.
 
 ### Directory and File Structure
 

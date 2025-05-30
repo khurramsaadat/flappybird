@@ -144,8 +144,7 @@ export default function FlappyBirdGame() {
     if (!ctx) return;
 
     function draw() {
-      // Use the ref for immediate game over state
-      const isGameOver = gameOverRef.current;
+      const ctx = canvasRef.current?.getContext("2d");
       if (!ctx) return;
       // Always draw background image first
       if (bgImg.current?.complete) {
@@ -218,9 +217,6 @@ export default function FlappyBirdGame() {
         if (!pipe.passed && (width / 4 + birdSize / 2 > pipe.x + pipeWidth)) {
           pipe.passed = true;
           setScore(s => s + 1);
-          setShowScore(true);
-          if (scoreTimeout.current) clearTimeout(scoreTimeout.current);
-          scoreTimeout.current = setTimeout(() => setShowScore(false), 1000);
           if (pointSound.current) {
             pointSound.current.currentTime = 0;
             pointSound.current.play();
