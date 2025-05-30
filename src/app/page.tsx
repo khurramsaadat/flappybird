@@ -40,8 +40,6 @@ export default function FlappyBirdGame() {
   const [canvasSize, setCanvasSize] = useState({ width: 400, height: 600 });
   const [isMobile, setIsMobile] = useState(false);
   const [lastTap, setLastTap] = useState(0);
-  const [showScore, setShowScore] = useState(false);
-  const scoreTimeout = useRef<NodeJS.Timeout | null>(null);
   const [overlayVisible, setOverlayVisible] = useState(false);
 
   // Game constants (will be updated based on canvas size)
@@ -402,7 +400,7 @@ export default function FlappyBirdGame() {
       ctx.fillText("Tap/Click to Start", width / 2, height * 0.5);
     }
     ctx.restore();
-  }, [canvasSize, started, gameOver, isMobile]);
+  }, [canvasSize, started, gameOver, isMobile, height, width]);
 
   // Update event handlers for canvas clicks/taps
   useEffect(() => {
