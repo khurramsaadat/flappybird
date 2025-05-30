@@ -12,6 +12,11 @@
 - Attempted to implement fade-in animation for game-over.png and sequential fade for scores/message (not yet working as intended).
 - Removed debug overlays and alerts from draw function.
 - Fallback 'Game Over!' red text and message still showing; further work needed to fully remove and unify custom UI.
+- Created `favicon.svg` (yellow circle with white 'f') and removed `favicon.ico`; ensured layout uses `favicon.svg` only.
+- Fixed image aspect ratio warning for `Flappy-Bird-Logo.png` by setting both width and height and using `width: auto`.
+- Made bird rotation smooth and natural using lerp interpolation, keeping max angle at 30 degrees.
+- Cleaned up `public/` directory and code for production.
+- Updated directory structure to reflect `favicon.svg` and removal of `favicon.ico`.
 
 ### Directory and File Structure
 
@@ -21,7 +26,7 @@
     - app/
       - _not-found/
         - page/
-      - favicon.ico/
+      - favicon.ico/ (removed)
         - route/
       - page/
     - chunks/
@@ -34,11 +39,11 @@
 - public/
   - audio/
   - images/
+  - favicon.svg
 - src/
   - app/
     - page.tsx
     - layout.tsx
-    - favicon.ico
     - globals.css
 - test-results/
   - tests-flappy-bird-Flappy-B-3fa4a-ents-and-stops-at-game-over/
