@@ -16,10 +16,6 @@ export default function FlappyBirdGame() {
   const [showScore, setShowScore] = useState(false);
   const scoreTimeout = useRef<NodeJS.Timeout | null>(null);
 
-  // Animation state for game over fade-in
-  const [gameOverFade, setGameOverFade] = useState(0); // 0 = invisible, 1 = fully visible
-  const [showGameOverDetails, setShowGameOverDetails] = useState(false);
-
   // Game constants (will be updated based on canvas size)
   const width = canvasSize.width;
   const height = canvasSize.height;
@@ -362,7 +358,7 @@ export default function FlappyBirdGame() {
     handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  }, [height, width]);
 
   // Draw everything in canvas
   useEffect(() => {
@@ -416,7 +412,6 @@ export default function FlappyBirdGame() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const handleClick = () => {
-      const rect = canvas.getBoundingClientRect();
       const btn = (canvas as CanvasWithRestartBtn)?._restartBtn;
       if (gameOver && btn) {
         setStarted(true); setGameOver(false); setScore(0);
@@ -444,30 +439,6 @@ export default function FlappyBirdGame() {
     canvas.addEventListener("touchstart", handleTouchEnd);
     return () => canvas.removeEventListener("touchstart", handleTouchEnd);
   }, [lastTap, started, jump, handleJump]);
-
-  // Animate game over fade-in
-  useEffect(() => {
-    if (gameOver) {
-      setGameOverFade(0);
-      setShowGameOverDetails(false);
-      let start: number | null = null;
-      function animateFade(ts: number) {
-        if (!start) start = ts;
-        const elapsed = ts - start;
-        const progress = Math.min(1, elapsed / 300); // 0.3s fade
-        setGameOverFade(progress);
-        if (progress < 1) {
-          requestAnimationFrame(animateFade);
-        } else {
-          setTimeout(() => setShowGameOverDetails(true), 50); // slight delay for polish
-        }
-      }
-      requestAnimationFrame(animateFade);
-    } else {
-      setGameOverFade(0);
-      setShowGameOverDetails(false);
-    }
-  }, [gameOver]);
 
   return (
     <div style={{ width: "100vw", height: "100vh", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", background: "#222" }}>
