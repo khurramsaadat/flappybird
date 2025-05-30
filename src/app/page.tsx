@@ -331,7 +331,7 @@ export default function FlappyBirdGame() {
             height={height}
             tabIndex={0}
             className="border-4 border-blue-500 rounded-lg bg-white outline-none focus:ring-2 focus:ring-blue-700"
-            onClick={() => { started ? handleJump() : handleStart(); }}
+            onClick={() => (started ? handleJump() : handleStart())}
             style={{ width: "100%", height: "auto", maxWidth: width, background: "#87ceeb" }}
           />
           {!started && !gameOver && (
