@@ -12,6 +12,7 @@
 - Attempted to implement fade-in animation for game-over.png and sequential fade for scores/message (not yet working as intended).
 - Removed debug overlays and alerts from draw function.
 - Fallback 'Game Over!' red text and message still showing; further work needed to fully remove and unify custom UI.
+- Updated PostCSS config to use `@tailwindcss/postcss` as the plugin for Tailwind v4 compatibility and Netlify build fix.
 - Fixed PostCSS config: replaced '@tailwindcss/postcss' with 'tailwindcss' in postcss.config.mjs to resolve Netlify build error.
 - Created `favicon.svg` (yellow circle with white 'f') and removed `favicon.ico`; ensured layout uses `favicon.svg` only.
 - Fixed image aspect ratio warning for `Flappy-Bird-Logo.png` by setting both width and height and using `width: auto`.
