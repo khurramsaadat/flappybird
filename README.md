@@ -54,3 +54,25 @@ To deploy this Next.js app on Netlify:
    ```
 
 5. (Optional) For best results, add a `netlify.toml` file as shown below.
+
+## Running Tests
+
+This project uses [Playwright](https://playwright.dev/) for end-to-end testing.
+
+To run tests:
+
+```bash
+npm run test
+```
+
+Or directly with Playwright:
+
+```bash
+npx playwright test
+```
+
+Make sure all dependencies are installed:
+
+```bash
+npm install
+```

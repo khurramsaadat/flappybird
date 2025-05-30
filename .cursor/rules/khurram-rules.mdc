@@ -4,7 +4,7 @@ globs:
 alwaysApply: true
 ---
 # Your rule content
-- read and follow instructions.md for this game.
+- When I set agent to AUTO, so mention the agent's name that was used for reply the code and answers.
 - DATES AND VERSIONS:
   - ALWAYS check @web for current date before any date-related operations
   - NEVER assume or use hardcoded dates

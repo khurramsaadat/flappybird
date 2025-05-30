@@ -1,22 +1,28 @@
 "use client";
 import { useEffect, useRef, useState, useCallback } from "react";
-import Image from "next/image";
+
+type CanvasWithRestartBtn = HTMLCanvasElement & {
+  _restartBtn?: { x: number; y: number; w: number; h: number };
+};
 
 export default function FlappyBirdGame() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [score, setScore] = useState(0);
   const [gameOver, setGameOver] = useState(false);
   const [started, setStarted] = useState(false);
-  const [showTap, setShowTap] = useState(true);
   const [canvasSize, setCanvasSize] = useState({ width: 400, height: 600 });
   const [isMobile, setIsMobile] = useState(false);
   const [lastTap, setLastTap] = useState(0);
   const [showScore, setShowScore] = useState(false);
   const scoreTimeout = useRef<NodeJS.Timeout | null>(null);
 
+  // Animation state for game over fade-in
+  const [gameOverFade, setGameOverFade] = useState(0); // 0 = invisible, 1 = fully visible
+  const [showGameOverDetails, setShowGameOverDetails] = useState(false);
+
   // Game constants (will be updated based on canvas size)
-  let width = canvasSize.width;
-  let height = canvasSize.height;
+  const width = canvasSize.width;
+  const height = canvasSize.height;
   const gravity = 0.35 * (height / 600);
   const jump = -6 * (height / 600);
   const birdSize = 40 * (height / 600);
@@ -41,6 +47,7 @@ export default function FlappyBirdGame() {
   const pipeRedBottom = useRef<HTMLImageElement | null>(null);
   const baseImg = useRef<HTMLImageElement | null>(null);
   const bgImg = useRef<HTMLImageElement | null>(null);
+  const gameOverImg = useRef<HTMLImageElement | null>(null);
   useEffect(() => {
     const img = new window.Image();
     img.src = "/flappy.png";
@@ -63,6 +70,9 @@ export default function FlappyBirdGame() {
     const bg = new window.Image();
     bg.src = "/images/background.jpg";
     bgImg.current = bg;
+    const gameOver = new window.Image();
+    gameOver.src = "/images/game-over.png";
+    gameOverImg.current = gameOver;
   }, []);
 
   // Load sounds
@@ -98,11 +108,14 @@ export default function FlappyBirdGame() {
     startedRef.current = true;
     gameOverRef.current = false;
     graceFrames.current = 30;
-    setShowTap(false);
     const ctx = canvasRef.current?.getContext("2d");
     if (!ctx) return;
 
     function draw() {
+      console.log('Calling draw()');
+      // Use the ref for immediate game over state
+      const isGameOver = gameOverRef.current;
+      console.log('Game over state (ref):', isGameOver);
       if (!ctx) return;
       // Always draw background image first
       if (bgImg.current?.complete) {
@@ -112,21 +125,6 @@ export default function FlappyBirdGame() {
         ctx.fillStyle = "#87ceeb";
         ctx.fillRect(0, 0, width, height);
         console.log("Drawing fallback blue background");
-      }
-      // Draw score only when showScore is true
-      if (showScore) {
-        ctx.save();
-        ctx.fillStyle = "rgba(0,0,0,0.3)";
-        ctx.fillRect(width/2-40, height*0.07-40, 80, 60); // debug background
-        ctx.font = `bold ${Math.round(height * 0.07)}px Arial Black, Arial, 'Geist', sans-serif`;
-        ctx.fillStyle = "#fff";
-        ctx.strokeStyle = "#222";
-        ctx.lineWidth = 4;
-        ctx.textAlign = "center";
-        ctx.strokeText(score.toString(), width / 2, height * 0.12);
-        ctx.fillText(score.toString(), width / 2, height * 0.12);
-        ctx.restore();
-        console.log("Drawing score:", score);
       }
       // Pipes (with images)
       pipes.current.forEach(pipe => {
@@ -165,6 +163,50 @@ export default function FlappyBirdGame() {
         ctx.fillRect(0, height - groundHeight, width, groundHeight);
         ctx.fillStyle = "#b0a14f";
         ctx.fillRect(0, height - groundHeight, width, 10);
+      }
+      // Draw custom game over UI with fade-in
+      if (isGameOver) {
+        // Fade in game-over.png
+        if (gameOverImg.current?.complete) {
+          ctx.save();
+          ctx.globalAlpha = gameOverFade;
+          const imgW = width * 0.7;
+          const imgH = imgW * (gameOverImg.current.height / gameOverImg.current.width);
+          ctx.drawImage(gameOverImg.current, width / 2 - imgW / 2, height * 0.18, imgW, imgH);
+          ctx.globalAlpha = 1.0;
+          ctx.restore();
+        }
+        // Fade in scores and yellow message after image
+        if (showGameOverDetails) {
+          ctx.save();
+          ctx.globalAlpha = Math.min(1, (gameOverFade - 0.7) / 0.3 + 1); // quick fade in after image
+          ctx.font = `${Math.round(height * 0.045)}px Arial Black, Arial, 'Geist', sans-serif`;
+          ctx.fillStyle = '#fff';
+          ctx.textAlign = 'center';
+          ctx.fillText(`Score: ${score}`, width / 2, height * 0.18 + (width * 0.7) * (gameOverImg.current?.height || 1) / (gameOverImg.current?.width || 1) + 50);
+          const best = Number(localStorage.getItem('bestScore') || 0);
+          ctx.fillText(`Best: ${best}`, width / 2, height * 0.18 + (width * 0.7) * (gameOverImg.current?.height || 1) / (gameOverImg.current?.width || 1) + 90);
+          ctx.font = `${Math.round(height * 0.025)}px Arial`;
+          ctx.fillStyle = '#ffe066';
+          ctx.fillText('Double tap to restart', width / 2, height * 0.18 + (width * 0.7) * (gameOverImg.current?.height || 1) / (gameOverImg.current?.width || 1) + 130);
+          ctx.globalAlpha = 1.0;
+          ctx.restore();
+        }
+      }
+      // Draw score last (highest z-index)
+      if (showScore) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.fillRect(width/2-40, height*0.07-40, 80, 60); // debug background
+        ctx.font = `bold ${Math.round(height * 0.07)}px Arial Black, Arial, 'Geist', sans-serif`;
+        ctx.fillStyle = '#fff';
+        ctx.strokeStyle = '#222';
+        ctx.lineWidth = 4;
+        ctx.textAlign = 'center';
+        ctx.strokeText(score.toString(), width / 2, height * 0.12);
+        ctx.fillText(score.toString(), width / 2, height * 0.12);
+        ctx.restore();
+        console.log('Drawing score:', score);
       }
     }
 
@@ -221,7 +263,7 @@ export default function FlappyBirdGame() {
           startedRef.current = false;
           setGameOver(true);
           setStarted(false);
-          setShowTap(true);
+          console.log('Setting gameOver to true (pipe collision)');
           if (hitSound.current) {
             hitSound.current.currentTime = 0;
             hitSound.current.play();
@@ -240,7 +282,7 @@ export default function FlappyBirdGame() {
         startedRef.current = false;
         setGameOver(true);
         setStarted(false);
-        setShowTap(true);
+        console.log('Setting gameOver to true (out of bounds)');
         if (hitSound.current) {
           hitSound.current.currentTime = 0;
           hitSound.current.play();
@@ -364,24 +406,14 @@ export default function FlappyBirdGame() {
       ctx.font = `bold ${Math.round(height * 0.055)}px Arial Black, Arial, 'Geist', sans-serif`;
       ctx.fillStyle = "#ff3b3b";
       ctx.fillText("Game Over!", width / 2, height * 0.25);
-      // Restart button
-      const btnW = width * 0.35;
-      const btnH = height * 0.08;
-      const btnX = width / 2 - btnW / 2;
-      const btnY = height * 0.32;
-      ctx.fillStyle = "#22c55e";
-      ctx.fillRect(btnX, btnY, btnW, btnH);
-      ctx.font = `${Math.round(height * 0.045)}px Arial`;
-      ctx.fillStyle = "#fff";
-      ctx.fillText("Restart", width / 2, btnY + btnH / 2 + height * 0.015);
       // Double tap to restart
       ctx.font = `${Math.round(height * 0.025)}px Arial`;
       ctx.fillStyle = "#fff";
-      ctx.fillText("Double tap to restart", width / 2, btnY + btnH + height * 0.04);
+      ctx.fillText("Double tap to restart", width / 2, height * 0.32);
       // Store button bounds for click/tap detection
-      (canvas as any)._restartBtn = { x: btnX, y: btnY, w: btnW, h: btnH };
+      (canvas as CanvasWithRestartBtn)._restartBtn = { x: 0, y: 0, w: 0, h: 0 };
     } else {
-      (canvas as any)._restartBtn = null;
+      (canvas as CanvasWithRestartBtn)._restartBtn = undefined;
     }
     // Start screen controls
     if (!started && !gameOver) {
@@ -400,7 +432,7 @@ export default function FlappyBirdGame() {
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
-      const btn = (canvas as any)?._restartBtn;
+      const btn = (canvas as CanvasWithRestartBtn)?._restartBtn;
       if (gameOver && btn && x >= btn.x && x <= btn.x + btn.w && y >= btn.y && y <= btn.y + btn.h) {
         setStarted(true); setGameOver(false); setScore(0);
       } else if (!started) {
@@ -431,6 +463,30 @@ export default function FlappyBirdGame() {
     return () => canvas.removeEventListener("touchstart", handleTouchEnd);
   }, []);
 
+  // Animate game over fade-in
+  useEffect(() => {
+    if (gameOver) {
+      setGameOverFade(0);
+      setShowGameOverDetails(false);
+      let start: number | null = null;
+      function animateFade(ts: number) {
+        if (!start) start = ts;
+        const elapsed = ts - start;
+        const progress = Math.min(1, elapsed / 300); // 0.3s fade
+        setGameOverFade(progress);
+        if (progress < 1) {
+          requestAnimationFrame(animateFade);
+        } else {
+          setTimeout(() => setShowGameOverDetails(true), 50); // slight delay for polish
+        }
+      }
+      requestAnimationFrame(animateFade);
+    } else {
+      setGameOverFade(0);
+      setShowGameOverDetails(false);
+    }
+  }, [gameOver]);
+
   return (
     <div style={{ width: "100vw", height: "100vh", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", background: "#222" }}>
       <canvas
@@ -443,7 +499,7 @@ export default function FlappyBirdGame() {
           const rect = canvasRef.current?.getBoundingClientRect();
           const x = e.clientX - (rect?.left || 0);
           const y = e.clientY - (rect?.top || 0);
-          const btn = (canvasRef.current as any)?._restartBtn;
+          const btn = (canvasRef.current as CanvasWithRestartBtn)?._restartBtn;
           if (gameOver && btn && x >= btn.x && x <= btn.x + btn.w && y >= btn.y && y <= btn.y + btn.h) {
             setStarted(true); setGameOver(false); setScore(0);
           } else if (!started) {
