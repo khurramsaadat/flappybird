@@ -53,6 +53,7 @@ export default function FlappyBirdGame() {
   const [gameOver, setGameOver] = useState(false);
   const [started, setStarted] = useState(false);
   const [canvasSize, setCanvasSize] = useState({ width: 400, height: 600 });
+  const [lockedCanvasSize, setLockedCanvasSize] = useState<{ width: number; height: number } | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [lastTap, setLastTap] = useState(0);
   const [overlayVisible, setOverlayVisible] = useState(false);
@@ -60,8 +61,8 @@ export default function FlappyBirdGame() {
   const [bestScore, setBestScore] = useState(0);
 
   // Game constants (will be updated based on canvas size)
-  const width = canvasSize.width;
-  const height = canvasSize.height;
+  const width = (lockedCanvasSize ?? canvasSize).width;
+  const height = (lockedCanvasSize ?? canvasSize).height;
   const gravity = 0.35 * (height / 600);
   const jump = -6 * (height / 600);
   const birdSize = 40 * (height / 600);
@@ -349,6 +350,7 @@ export default function FlappyBirdGame() {
     setStarted(true);
     setGameOver(false);
     setScore(0);
+    setLockedCanvasSize(canvasSize); // Lock the canvas size at game start
     if (swooshSound.current) {
       swooshSound.current.currentTime = 0;
       swooshSound.current.play();
@@ -373,20 +375,22 @@ export default function FlappyBirdGame() {
     function handleResize() {
       const isMobileDevice = window.innerWidth < 768;
       setIsMobile(isMobileDevice);
-      if (isMobileDevice) {
-        setCanvasSize({ width: window.innerWidth, height: window.innerHeight });
-      } else {
-        // Desktop: full viewport height, proportional width
-        const aspect = 400 / 600;
-        const vh = window.innerHeight;
-        const vw = Math.min(window.innerWidth, vh * aspect);
-        setCanvasSize({ width: vw, height: vh });
+      if (!lockedCanvasSize) {
+        if (isMobileDevice) {
+          setCanvasSize({ width: window.innerWidth, height: window.innerHeight });
+        } else {
+          // Desktop: full viewport height, proportional width
+          const aspect = 400 / 600;
+          const vh = window.innerHeight;
+          const vw = Math.min(window.innerWidth, vh * aspect);
+          setCanvasSize({ width: vw, height: vh });
+        }
       }
     }
     handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, [height, width]);
+  }, [height, width, lockedCanvasSize]);
 
   // Draw everything in canvas
   useEffect(() => {
@@ -517,6 +521,13 @@ export default function FlappyBirdGame() {
       }
     }
   }, [gameOver, score, bestScore]);
+
+  // When game is over or reset, unlock the canvas size
+  useEffect(() => {
+    if (!started && !gameOver) {
+      setLockedCanvasSize(null);
+    }
+  }, [started, gameOver]);
 
   return (
     <div style={{ width: "100vw", height: "100vh", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", background: "#222" }}>
