@@ -22,6 +22,9 @@
 - Removed unused variables (`showScore`, `isGameOver`) and all related logic for code cleanliness and Netlify build success.
 - Fixed linter errors by ensuring `ctx` is not null before use in the draw function.
 - Updated useEffect dependency array for responsive canvas scaling to include both `height` and `width`.
+- Attempted to implement idle bird floating animation before game start (not yet working, will revisit).
+- Added pulsing animation to "TAP TO START" overlay.
+- Best score now persists using localStorage.
 
 ### Directory and File Structure
 
@@ -62,4 +65,15 @@
 - package.json
 - postcss.config.mjs
 - README.md
-- tsconfig.json 
+- tsconfig.json
+
+### Known Issues
+- Idle animation for bird before game start is not yet working as intended.
+- Warning for game-over.png: Next.js Image expects both width and height, but CSS may override. (No functional impact.)
+- favicon.svg 404: favicon.svg is present in public/images/favicon.svg but not in public/. Consider moving or updating the reference.
+
+### Commands Used
+- Various code edits to src/app/page.tsx
+- Playwright MCP browser inspection
+
+--- 

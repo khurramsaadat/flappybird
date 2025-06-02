@@ -32,6 +32,21 @@ function ScoreCounter({ score, canvasSize }: { score: number; canvasSize: { widt
   );
 }
 
+// Add keyframes for pulsing animation
+const pulseStyle = `
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.12); opacity: 0.7; }
+  100% { transform: scale(1); opacity: 1; }
+}
+`;
+if (typeof window !== 'undefined' && !document.getElementById('pulse-keyframes')) {
+  const style = document.createElement('style');
+  style.id = 'pulse-keyframes';
+  style.innerHTML = pulseStyle;
+  document.head.appendChild(style);
+}
+
 export default function FlappyBirdGame() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [score, setScore] = useState(0);
@@ -41,6 +56,8 @@ export default function FlappyBirdGame() {
   const [isMobile, setIsMobile] = useState(false);
   const [lastTap, setLastTap] = useState(0);
   const [overlayVisible, setOverlayVisible] = useState(false);
+  const [idleFrame, setIdleFrame] = useState(0); // for idle floating
+  const [bestScore, setBestScore] = useState(0);
 
   // Game constants (will be updated based on canvas size)
   const width = canvasSize.width;
@@ -118,6 +135,73 @@ export default function FlappyBirdGame() {
     if (dieSound.current) dieSound.current.volume = 0.5;
   }, []);
 
+  // Move draw to top-level and wrap in useCallback for stable reference
+  const draw = useCallback(() => {
+    const ctx = canvasRef.current?.getContext("2d");
+    if (!ctx) return;
+    // Always draw background image first
+    if (bgImg.current?.complete) {
+      ctx.drawImage(bgImg.current, 0, 0, width, height);
+    } else {
+      ctx.fillStyle = "#87ceeb";
+      ctx.fillRect(0, 0, width, height);
+    }
+    // Pipes (with images, flush and scaled)
+    pipes.current.forEach(pipe => {
+      const isGreen = pipe.color === "green";
+      const topImg = isGreen ? pipeGreenTop.current : pipeRedTop.current;
+      const botImg = isGreen ? pipeGreenBottom.current : pipeRedBottom.current;
+      // Top pipe: from top to gap
+      const topPipeHeight = pipe.top;
+      if (topImg?.complete) {
+        ctx.drawImage(topImg, pipe.x, 0, pipeWidth, topPipeHeight);
+      } else {
+        ctx.fillStyle = isGreen ? "#4ec04e" : "#d2691e";
+        ctx.fillRect(pipe.x, 0, pipeWidth, topPipeHeight);
+      }
+      // Bottom pipe: from gap to base
+      const baseY = height - groundHeight;
+      const bottomPipeY = pipe.top + pipeGap;
+      const bottomPipeHeight = baseY - bottomPipeY;
+      if (botImg?.complete) {
+        ctx.drawImage(botImg, pipe.x, bottomPipeY, pipeWidth, bottomPipeHeight);
+      } else {
+        ctx.fillStyle = isGreen ? "#4ec04e" : "#d2691e";
+        ctx.fillRect(pipe.x, bottomPipeY, pipeWidth, bottomPipeHeight);
+      }
+    });
+    // Bird rotation: 30deg clockwise when falling, 30deg counterclockwise when rising
+    const birdCenterX = width / 4;
+    let birdCenterY = birdY.current + birdSize / 2;
+    let angle = birdAngle.current;
+    // Idle floating effect
+    if (!started && !gameOver) {
+      birdCenterY = height / 2 + Math.sin(idleFrame / 20) * 16;
+      angle = 0; // No rotation in idle
+    }
+    ctx.save();
+    ctx.translate(birdCenterX, birdCenterY);
+    ctx.rotate(angle);
+    if (birdImg.current?.complete) {
+      ctx.drawImage(birdImg.current, -birdSize / 2, -birdSize / 2, birdSize, birdSize);
+    } else {
+      ctx.fillStyle = "yellow";
+      ctx.beginPath();
+      ctx.arc(0, 0, birdSize / 2, 0, 2 * Math.PI);
+      ctx.fill();
+    }
+    ctx.restore();
+    // Draw base (in front of pipes)
+    if (baseImg.current?.complete) {
+      ctx.drawImage(baseImg.current, 0, height - groundHeight, width, groundHeight);
+    } else {
+      ctx.fillStyle = "#ded895";
+      ctx.fillRect(0, height - groundHeight, width, groundHeight);
+      ctx.fillStyle = "#b0a14f";
+      ctx.fillRect(0, height - groundHeight, width, 10);
+    }
+  }, [width, height, birdSize, pipeWidth, pipeGap, groundHeight, started, gameOver, idleFrame]);
+
   // Game loop
   useEffect(() => {
     if (!started) return;
@@ -140,68 +224,9 @@ export default function FlappyBirdGame() {
     graceFrames.current = 30;
     const ctx = canvasRef.current?.getContext("2d");
     if (!ctx) return;
-
-    function draw() {
-      const ctx = canvasRef.current?.getContext("2d");
-      if (!ctx) return;
-      // Always draw background image first
-      if (bgImg.current?.complete) {
-        ctx.drawImage(bgImg.current, 0, 0, width, height);
-      } else {
-        ctx.fillStyle = "#87ceeb";
-        ctx.fillRect(0, 0, width, height);
-      }
-      // Pipes (with images, flush and scaled)
-      pipes.current.forEach(pipe => {
-        const isGreen = pipe.color === "green";
-        const topImg = isGreen ? pipeGreenTop.current : pipeRedTop.current;
-        const botImg = isGreen ? pipeGreenBottom.current : pipeRedBottom.current;
-        // Top pipe: from top to gap
-        const topPipeHeight = pipe.top;
-        if (topImg?.complete) {
-          ctx.drawImage(topImg, pipe.x, 0, pipeWidth, topPipeHeight);
-        } else {
-          ctx.fillStyle = isGreen ? "#4ec04e" : "#d2691e";
-          ctx.fillRect(pipe.x, 0, pipeWidth, topPipeHeight);
-        }
-        // Bottom pipe: from gap to base
-        const baseY = height - groundHeight;
-        const bottomPipeY = pipe.top + pipeGap;
-        const bottomPipeHeight = baseY - bottomPipeY;
-        if (botImg?.complete) {
-          ctx.drawImage(botImg, pipe.x, bottomPipeY, pipeWidth, bottomPipeHeight);
-        } else {
-          ctx.fillStyle = isGreen ? "#4ec04e" : "#d2691e";
-          ctx.fillRect(pipe.x, bottomPipeY, pipeWidth, bottomPipeHeight);
-        }
-      });
-      // Bird rotation: 30deg clockwise when falling, 30deg counterclockwise when rising
-      const birdCenterX = width / 4;
-      const birdCenterY = birdY.current + birdSize / 2;
-      ctx.save();
-      ctx.translate(birdCenterX, birdCenterY);
-      ctx.rotate(birdAngle.current);
-      if (birdImg.current?.complete) {
-        ctx.drawImage(birdImg.current, -birdSize / 2, -birdSize / 2, birdSize, birdSize);
-      } else {
-        ctx.fillStyle = "yellow";
-        ctx.beginPath();
-        ctx.arc(0, 0, birdSize / 2, 0, 2 * Math.PI);
-        ctx.fill();
-      }
-      ctx.restore();
-      // Draw base (in front of pipes)
-      if (baseImg.current?.complete) {
-        ctx.drawImage(baseImg.current, 0, height - groundHeight, width, groundHeight);
-      } else {
-        ctx.fillStyle = "#ded895";
-        ctx.fillRect(0, height - groundHeight, width, groundHeight);
-        ctx.fillStyle = "#b0a14f";
-        ctx.fillRect(0, height - groundHeight, width, 10);
-      }
-    }
-
+    let running = true;
     function update() {
+      if (!running) return;
       if (score >= 30) pipeSpeed = 4.0;
       birdV.current += gravity;
       birdY.current += birdV.current;
@@ -281,7 +306,6 @@ export default function FlappyBirdGame() {
         return;
       }
     }
-
     function loop() {
       update();
       draw();
@@ -290,9 +314,12 @@ export default function FlappyBirdGame() {
       }
     }
     loop();
-    return () => cancelAnimationFrame(animation.current!);
+    return () => {
+      running = false;
+      cancelAnimationFrame(animation.current!);
+    };
     // eslint-disable-next-line
-  }, [started]);
+  }, [started, gameOver, draw]);
 
   // Handle jump (works for all input types)
   const handleJump = useCallback(() => {
@@ -447,6 +474,44 @@ export default function FlappyBirdGame() {
   // Home/start screen overlay logic
   const showHomeOverlay = !started && !gameOver;
 
+  // Idle animation loop (calls main draw for floating bird)
+  useEffect(() => {
+    if (started || gameOver) return;
+    let frame = 0;
+    let animId: number;
+    let running = true;
+    function animate() {
+      if (!running) return;
+      setIdleFrame(frame);
+      frame++;
+      draw(); // Call the main draw function so all logic is in one place
+      animId = requestAnimationFrame(animate);
+    }
+    animate();
+    return () => {
+      running = false;
+      cancelAnimationFrame(animId);
+    };
+  }, [started, gameOver, draw]);
+
+  // Load best score from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('bestScore');
+      setBestScore(stored ? parseInt(stored, 10) : 0);
+    }
+  }, []);
+
+  // Update best score in localStorage on game over
+  useEffect(() => {
+    if (gameOver && typeof window !== 'undefined') {
+      if (score > bestScore) {
+        setBestScore(score);
+        localStorage.setItem('bestScore', String(score));
+      }
+    }
+  }, [gameOver, score, bestScore]);
+
   return (
     <div style={{ width: "100vw", height: "100vh", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", background: "#222" }}>
       <div style={{ position: "relative", width: canvasSize.width, height: canvasSize.height }}>
@@ -506,20 +571,24 @@ export default function FlappyBirdGame() {
             <Image
               src="/images/Flappy-Bird-Logo.png"
               alt="Flappy Bird Logo"
-              width={Math.round(canvasSize.width * 0.6)}
-              height={Math.round(canvasSize.height * 0.12)}
+              width={240}
+              height={48}
               style={{ maxWidth: "60%", height: "auto", width: "auto", marginBottom: 24, marginTop: canvasSize.height * 0.08 }}
               priority
             />
-            <div style={{
-              color: "#a259ff",
-              fontWeight: 900,
-              fontSize: Math.round(canvasSize.height * 0.04),
-              textAlign: "center",
-              marginTop: canvasSize.height * 0.1,
-              textTransform: "uppercase",
-              letterSpacing: 2,
-            }}>
+            <div
+              style={{
+                color: "#a259ff",
+                fontWeight: 900,
+                fontSize: Math.round(canvasSize.height * 0.04),
+                textAlign: "center",
+                marginTop: canvasSize.height * 0.1,
+                textTransform: "uppercase",
+                letterSpacing: 2,
+                animation: "pulse 1.2s infinite cubic-bezier(0.4,0,0.2,1)",
+                willChange: "transform, opacity",
+              }}
+            >
               TAP TO START
             </div>
           </div>
@@ -544,6 +613,7 @@ export default function FlappyBirdGame() {
               transition: "opacity 1s cubic-bezier(0,0,0.2,1)",
               transform: overlayVisible ? "scale(1)" : "scale(0.85)",
               transitionProperty: "opacity, transform",
+              textAlign: "center",
             }}
             onClick={() => {
               setStarted(true); setGameOver(false); setScore(0);
@@ -556,22 +626,27 @@ export default function FlappyBirdGame() {
             <Image
               src="/images/Flappy-Bird-Logo.png"
               alt="Flappy Bird Logo"
-              width={Math.round(canvasSize.width * 0.35)}
-              height={Math.round(canvasSize.height * 0.07)}
+              width={140}
+              height={28}
               style={{ maxWidth: "35%", height: "auto", width: "auto", marginBottom: 30, marginTop: canvasSize.height * 0.0, transition: "transform 1s cubic-bezier(0,0,0.2,1)", transform: overlayVisible ? "scale(1)" : "scale(0.85)" }}
               priority
             />
             <div style={{
               transition: "transform 1s cubic-bezier(0,0,0.2,1)",
               transform: overlayVisible ? "scale(1.08)" : "scale(0.7)",
-              willChange: "transform"
+              willChange: "transform",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "100%",
             }}>
               <Image
                 src="/images/game-over.png"
                 alt="Game Over"
                 width={Math.round(canvasSize.width * 0.7)}
                 height={Math.round((canvasSize.width * 0.7) * 0.285)}
-                style={{ maxWidth: "70%", height: "auto", marginBottom: 24 }}
+                style={{ maxWidth: "70%", height: "auto", marginBottom: 24, display: "block", marginLeft: "auto", marginRight: "auto" }}
                 priority
               />
             </div>
@@ -588,7 +663,7 @@ export default function FlappyBirdGame() {
               gap: 24,
             }}>
               <span>Score: {score}</span>
-              <span>Best: {typeof window !== 'undefined' ? (localStorage.getItem('bestScore') || 0) : 0}</span>
+              <span>Best: {bestScore}</span>
             </div>
             {/* Copyright at the bottom */}
             <div style={{
