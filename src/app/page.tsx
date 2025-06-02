@@ -209,7 +209,7 @@ export default function FlappyBirdGame() {
     setScore(0);
     birdY.current = height / 2;
     birdV.current = 0;
-    let pipeSpeed = 2.5; // Constant, faster speed
+    let pipeSpeed = 5.0;
     function randomPipeColor() {
       return Math.random() < 0.5 ? "green" : "red";
     }
@@ -227,7 +227,13 @@ export default function FlappyBirdGame() {
     let running = true;
     function update() {
       if (!running) return;
-      if (score >= 30) pipeSpeed = 4.0;
+      if (score >= 20) {
+        pipeSpeed = 7.0;
+      } else if (score >= 10) {
+        pipeSpeed = 5.25;
+      } else {
+        pipeSpeed = 3.5;
+      }
       birdV.current += gravity;
       birdY.current += birdV.current;
       // Smoothly interpolate bird angle based on velocity
@@ -644,9 +650,9 @@ export default function FlappyBirdGame() {
               <Image
                 src="/images/game-over.png"
                 alt="Game Over"
-                width={Math.round(canvasSize.width * 0.7)}
-                height={Math.round((canvasSize.width * 0.7) * 0.285)}
-                style={{ maxWidth: "70%", height: "auto", marginBottom: 24, display: "block", marginLeft: "auto", marginRight: "auto" }}
+                width={700}
+                height={200}
+                style={{ width: "60%", height: "auto", display: "block", margin: "0 auto", marginBottom: 24 }}
                 priority
               />
             </div>
@@ -687,7 +693,15 @@ export default function FlappyBirdGame() {
               <span style={{ color: "#ff3b3b", fontSize: Math.round(canvasSize.height * 0.018) }}>❤️</span>
               <span>KHURRAM</span>
             </div>
-            <div style={{ color: "#ffe066", fontWeight: 700, fontSize: Math.round(canvasSize.height * 0.03) }}>
+            <div
+              style={{
+                color: "#ffe066",
+                fontWeight: 700,
+                fontSize: Math.round(canvasSize.height * 0.03),
+                animation: "pulse 1.2s infinite cubic-bezier(0.4,0,0.2,1)",
+                willChange: "transform, opacity",
+              }}
+            >
               Double tap to restart
             </div>
           </div>
