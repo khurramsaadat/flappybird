@@ -507,7 +507,7 @@ export default function FlappyBirdGame() {
     const handleClick = () => {
       const btn = (canvas as CanvasWithRestartBtn)?._restartBtn;
       if (gameOver && btn) {
-        setStarted(true); setGameOver(false); setScore(0);
+        setGameOver(false); setStarted(false); setScore(0);
       } else if (!started) {
         setStarted(true); setGameOver(false); setScore(0);
       } else if (started) {
@@ -524,7 +524,7 @@ export default function FlappyBirdGame() {
     const handleTouchEnd = () => {
       const now = Date.now();
       if (now - lastTap < 400) {
-        setStarted(true); setGameOver(false); setScore(0);
+        setGameOver(false); setStarted(false); setScore(0);
       }
       setLastTap(now);
       if (started) handleJump(); // Use handleJump for tap
@@ -608,6 +608,7 @@ export default function FlappyBirdGame() {
         {/* Home/Start Overlay */}
         {showHomeOverlay && (
           <div
+            data-testid="start-overlay"
             style={{
               position: "absolute",
               top: 0,
@@ -620,7 +621,7 @@ export default function FlappyBirdGame() {
               alignItems: "center",
               justifyContent: "center",
               background: `url(/images/background.jpg) center/cover no-repeat`,
-              pointerEvents: "auto",
+              pointerEvents: showHomeOverlay ? "auto" : "none",
             }}
             onClick={() => {
               setStarted(true); setGameOver(false); setScore(0);
@@ -642,13 +643,14 @@ export default function FlappyBirdGame() {
               style={{
                 color: "#a259ff",
                 fontWeight: 900,
-                fontSize: Math.round(canvasSize.height * 0.04),
+                fontSize: Math.round(canvasSize.height * 0.04 * 0.85),
                 textAlign: "center",
                 marginTop: canvasSize.height * 0.1,
                 textTransform: "uppercase",
-                letterSpacing: 2,
+                letterSpacing: 1,
                 animation: "pulse 1.2s infinite cubic-bezier(0.4,0,0.2,1)",
                 willChange: "transform, opacity",
+                fontFamily: "var(--font-press-start-2p)",
               }}
             >
               TAP TO START
@@ -658,6 +660,7 @@ export default function FlappyBirdGame() {
         {/* Game Over Overlay */}
         {gameOver && (
           <div
+            data-testid="game-over-overlay"
             style={{
               position: "absolute",
               top: 0,
@@ -670,7 +673,7 @@ export default function FlappyBirdGame() {
               alignItems: "center",
               justifyContent: "center",
               background: "rgba(0,0,0,0.25)",
-              pointerEvents: "auto",
+              pointerEvents: overlayVisible ? "auto" : "none",
               opacity: overlayVisible ? 1 : 0,
               transition: "opacity 1s cubic-bezier(0,0,0.2,1)",
               transform: overlayVisible ? "scale(1)" : "scale(0.85)",
@@ -678,10 +681,10 @@ export default function FlappyBirdGame() {
               textAlign: "center",
             }}
             onClick={() => {
-              setStarted(true); setGameOver(false); setScore(0);
+              setGameOver(false); setStarted(false); setScore(0); // Go to home, do not start game
             }}
             onTouchEnd={() => {
-              setStarted(true); setGameOver(false); setScore(0);
+              setGameOver(false); setStarted(false); setScore(0); // Go to home, do not start game
             }}
           >
             {/* Flappy Bird Logo above game over image, smaller */}
@@ -703,26 +706,38 @@ export default function FlappyBirdGame() {
               justifyContent: "center",
               width: "100%",
             }}>
-              <Image
-                src="/images/game-over.png"
-                alt="Game Over"
-                width={700}
-                height={200}
-                style={{ width: "60%", height: "auto", display: "block", margin: "0 auto", marginBottom: 24 }}
-                priority
-              />
+              {/* Animated GAME OVER text using Press Start 2P font */}
+              <div
+                style={{
+                  color: "#ffe066",
+                  fontFamily: "var(--font-press-start-2p)",
+                  fontWeight: 900,
+                  fontSize: Math.round(canvasSize.height * 0.06),
+                  textAlign: "center",
+                  lineHeight: 1.1,
+                  marginBottom: 24,
+                  textShadow: "2px 2px 8px #222, 0 0 2px #fff",
+                  animation: "pulse 1.2s infinite cubic-bezier(0.4,0,0.2,1)",
+                  willChange: "transform, opacity",
+                  letterSpacing: 2,
+                  userSelect: "none",
+                }}
+              >
+                GAME<br />OVER
+              </div>
             </div>
             {/* Score and Best on one line, light purple and bold */}
             <div style={{
               color: "#d6b4ff",
               fontWeight: 900,
-              fontSize: Math.round(canvasSize.height * 0.045),
+              fontSize: Math.round(canvasSize.height * 0.045 * 0.55),
               margin: "8px 0 16px 0",
               textAlign: "center",
               display: "flex",
               flexDirection: "row",
               justifyContent: "center",
               gap: 24,
+              fontFamily: "var(--font-press-start-2p)",
             }}>
               <span>Score: {score}</span>
               <span>Best: {bestScore}</span>
@@ -753,12 +768,13 @@ export default function FlappyBirdGame() {
               style={{
                 color: "#ffe066",
                 fontWeight: 700,
-                fontSize: Math.round(canvasSize.height * 0.03),
+                fontSize: Math.round(canvasSize.height * 0.03 * 0.85),
                 animation: "pulse 1.2s infinite cubic-bezier(0.4,0,0.2,1)",
                 willChange: "transform, opacity",
+                fontFamily: "var(--font-press-start-2p)",
               }}
             >
-              Double tap to restart
+              TAP TO RESTART
             </div>
           </div>
         )}

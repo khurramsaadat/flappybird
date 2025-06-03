@@ -50,5 +50,5 @@ alwaysApply: true
 - Document any recurring issues and their solutions in CHANGELOG.md
 - For configuration errors (like next.config.ts), address them before proceeding with feature work
 - Git is main not master.
-- When user mention save, please update CHANGELOG.md and include folder structure including files and push all codes and files to Git and GitHub.
+- When user mention save, please update CHANGELOG.md, PROGRESS.md and include folder structure including files and push all codes and files to Git and GitHub.
 

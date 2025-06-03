@@ -26,11 +26,61 @@
 - Added pulsing animation to "TAP TO START" overlay.
 - Best score now persists using localStorage.
 
-## 2025-06-03
-- Implemented a smooth, looping idle bird animation (sine wave, 5s loop, amplitude scales with bird size).
-- Enforced minimum pipe gap (bird height x 6) for both horizontal and vertical gaps on mobile devices for better playability.
-- Added clear comments in code for easy tweaking of these values.
-- Checked and resolved all Problems tab and terminal issues before and after changes.
+## [2025-06-03]
+### Changes
+- Removed unused `public/images/game-over.png` (replaced with animated GAME OVER text).
+- Animated two-line "GAME OVER" text using Press Start 2P font in yellow, centered and pulsing.
+- Font improvements: further reduced font size for Score and Best, ensured all overlays use Press Start 2P.
+- All overlays and prompts now use consistent font and animation.
+- Bugfixes: addressed all reported issues, including double jump, pipe spacing, and event handling.
+- Updated Playwright tests and data-testid attributes for overlays.
+- Documented all changes and followed best practices per Khurram's rules.
+- Noted persistent Next.js React Client Manifest server errors (see terminal logs for details).
+
+### Modified files
+- .cursor/rules/khurram-rules.mdc
+- src/app/layout.tsx
+- src/app/page.tsx
+- tests/flappy-bird.spec.ts
+- test-results/.last-run.json
+
+### Deleted files
+- public/images/game-over.png
+- test-results/tests-flappy-bird-Flappy-B-3fa4a-ents-and-stops-at-game-over/error-context.md
+
+### Directory and file structure
+```
+flappy-bird/
+  .next/
+  public/
+    audio/
+    images/
+      (game-over.png removed)
+  src/
+    app/
+      layout.tsx
+      page.tsx
+  test-results/
+    .last-run.json
+  tests/
+    flappy-bird.spec.ts
+  .gitignore
+  CHANGELOG.md
+  eslint.config.mjs
+  netlify.toml
+  next-env.d.ts
+  next.config.ts
+  package-lock.json
+  package.json
+  postcss.config.mjs
+  PROGRESS.md
+  README.md
+  tsconfig.json
+  tsconfig.tsbuildinfo
+```
+
+### Notes
+- Persistent server errors: Next.js React Client Manifest module not found (see terminal logs). No user-facing impact observed.
 
 ### Directory and File Structure
 
