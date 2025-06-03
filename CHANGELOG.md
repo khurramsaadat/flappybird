@@ -36,6 +36,10 @@
 - Updated Playwright tests and data-testid attributes for overlays.
 - Documented all changes and followed best practices per Khurram's rules.
 - Noted persistent Next.js React Client Manifest server errors (see terminal logs for details).
+- Removed double-tap-to-restart logic from mobile touch handler. Now only 'Tap to restart' is supported on overlays; double tap during gameplay no longer ends the game. (UX and bugfix improvement)
+- Removed gameOverImg reference and loading (cleanup, fixes 404 error for /images/game-over.png).
+- Increased pipe speed to 6.0 after score reaches 40 (game difficulty scaling).
+- Reduced all game sound volumes by 50% (volume set to 0.25 for all sounds).
 
 ### Modified files
 - .cursor/rules/khurram-rules.mdc

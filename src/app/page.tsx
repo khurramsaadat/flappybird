@@ -136,7 +136,6 @@ export default function FlappyBirdGame() {
   const pipeRedBottom = useRef<HTMLImageElement | null>(null);
   const baseImg = useRef<HTMLImageElement | null>(null);
   const bgImg = useRef<HTMLImageElement | null>(null);
-  const gameOverImg = useRef<HTMLImageElement | null>(null);
   useEffect(() => {
     const img = new window.Image();
     img.src = "/flappy.png";
@@ -159,9 +158,6 @@ export default function FlappyBirdGame() {
     const bg = new window.Image();
     bg.src = "/images/background.jpg";
     bgImg.current = bg;
-    const gameOver = new window.Image();
-    gameOver.src = "/images/game-over.png";
-    gameOverImg.current = gameOver;
   }, []);
 
   // Load sounds
@@ -172,15 +168,15 @@ export default function FlappyBirdGame() {
   const dieSound = useRef<HTMLAudioElement | null>(null);
   useEffect(() => {
     wingSound.current = new window.Audio("/audio/sfx_wing.wav");
-    if (wingSound.current) wingSound.current.volume = 0.5;
+    if (wingSound.current) wingSound.current.volume = 0.25;
     swooshSound.current = new window.Audio("/audio/sfx_swooshing.wav");
-    if (swooshSound.current) swooshSound.current.volume = 0.5;
+    if (swooshSound.current) swooshSound.current.volume = 0.25;
     pointSound.current = new window.Audio("/audio/sfx_point.wav");
-    if (pointSound.current) pointSound.current.volume = 0.5;
+    if (pointSound.current) pointSound.current.volume = 0.05;
     hitSound.current = new window.Audio("/audio/sfx_hit.wav");
-    if (hitSound.current) hitSound.current.volume = 0.5;
+    if (hitSound.current) hitSound.current.volume = 0.25;
     dieSound.current = new window.Audio("/audio/sfx_die.wav");
-    if (dieSound.current) dieSound.current.volume = 0.5;
+    if (dieSound.current) dieSound.current.volume = 0.25;
   }, []);
 
   // Move draw to top-level and wrap in useCallback for stable reference
@@ -286,7 +282,9 @@ export default function FlappyBirdGame() {
     let running = true;
     function update() {
       if (!running) return;
-      if (score >= 20) {
+      if (score >= 40) {
+        pipeSpeed = 6.0;
+      } else if (score >= 20) {
         pipeSpeed = 5.0;
       } else if (score >= 10) {
         pipeSpeed = 4.0;
@@ -522,16 +520,15 @@ export default function FlappyBirdGame() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const handleTouchEnd = () => {
-      const now = Date.now();
-      if (now - lastTap < 400) {
+      if (gameOver || !started) {
         setGameOver(false); setStarted(false); setScore(0);
+      } else if (started) {
+        handleJump(); // Use handleJump for tap
       }
-      setLastTap(now);
-      if (started) handleJump(); // Use handleJump for tap
     };
     canvas.addEventListener("touchstart", handleTouchEnd);
     return () => canvas.removeEventListener("touchstart", handleTouchEnd);
-  }, [lastTap, started, jump, handleJump]);
+  }, [gameOver, started, handleJump]);
 
   // Fade-in for overlay
   useEffect(() => {

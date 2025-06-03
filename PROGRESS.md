@@ -9,6 +9,10 @@
 - Documented all changes and followed best practices per Khurram's rules.
 - Persistent Next.js React Client Manifest server errors noted (see terminal logs).
 - All changes committed and ready for push.
+- Removed double-tap-to-restart logic from mobile touch handler. Now only 'Tap to restart' is supported on overlays; double tap during gameplay no longer ends the game. (UX and bugfix improvement)
+- Removed gameOverImg reference and loading (cleanup, fixes 404 error for /images/game-over.png).
+- Increased pipe speed to 6.0 after score reaches 40 (game difficulty scaling).
+- Reduced all game sound volumes by 50% (volume set to 0.25 for all sounds).
 
 ## 2025-06-03
 - User requested: Idle bird should float smoothly in a sine wave, looping every 5 seconds, with no pause between loops. Animation speed and amplitude should scale with screen size. Minimum pipe gap on mobile should be bird height x 6 for both horizontal and vertical gaps. Add comments for easy tweaking.
