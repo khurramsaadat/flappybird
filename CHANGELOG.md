@@ -40,6 +40,9 @@
 - Removed gameOverImg reference and loading (cleanup, fixes 404 error for /images/game-over.png).
 - Increased pipe speed to 6.0 after score reaches 40 (game difficulty scaling).
 - Reduced all game sound volumes by 50% (volume set to 0.25 for all sounds).
+- Removed unused variables 'lastTap' and 'setLastTap' to fix TypeScript lint error.
+- Ensured 'TAP TO RESTART' takes user to home screen overlay (not directly into game).
+- Fixed event bubbling on 'TAP TO RESTART' so it always returns to home overlay and does not immediately start the game. Used stopPropagation on overlay handlers.
 
 ### Modified files
 - .cursor/rules/khurram-rules.mdc

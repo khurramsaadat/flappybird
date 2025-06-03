@@ -13,6 +13,9 @@
 - Removed gameOverImg reference and loading (cleanup, fixes 404 error for /images/game-over.png).
 - Increased pipe speed to 6.0 after score reaches 40 (game difficulty scaling).
 - Reduced all game sound volumes by 50% (volume set to 0.25 for all sounds).
+- Removed unused variables 'lastTap' and 'setLastTap' to fix TypeScript lint error.
+- Ensured 'TAP TO RESTART' takes user to home screen overlay (not directly into game).
+- Fixed event bubbling on 'TAP TO RESTART' so it always returns to home overlay and does not immediately start the game. Used stopPropagation on overlay handlers.
 
 ## 2025-06-03
 - User requested: Idle bird should float smoothly in a sine wave, looping every 5 seconds, with no pause between loops. Animation speed and amplitude should scale with screen size. Minimum pipe gap on mobile should be bird height x 6 for both horizontal and vertical gaps. Add comments for easy tweaking.

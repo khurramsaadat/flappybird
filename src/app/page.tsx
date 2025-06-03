@@ -96,10 +96,11 @@ export default function FlappyBirdGame() {
   const [canvasSize, setCanvasSize] = useState({ width: 400, height: 600 });
   const [lockedCanvasSize, setLockedCanvasSize] = useState<{ width: number; height: number } | null>(null);
   const [isMobile, setIsMobile] = useState(false);
-  const [lastTap, setLastTap] = useState(0);
   const [overlayVisible, setOverlayVisible] = useState(false);
   const [idleFrame, setIdleFrame] = useState(0); // for idle floating
   const [bestScore, setBestScore] = useState(0);
+  const [homeOverlayShownAt, setHomeOverlayShownAt] = useState<number>(0);
+  const [gameOverShownAt, setGameOverShownAt] = useState<number>(0);
 
   // Game constants (will be updated based on canvas size)
   const width = (lockedCanvasSize ?? canvasSize).width;
@@ -540,7 +541,14 @@ export default function FlappyBirdGame() {
   }, [gameOver]);
 
   // Home/start screen overlay logic
-  const showHomeOverlay = !started && !gameOver;
+  const showHomeOverlay = !started && (!gameOver || (gameOver && Date.now() - gameOverShownAt > 500));
+
+  // When home overlay is shown, record the time
+  useEffect(() => {
+    if (showHomeOverlay) {
+      setHomeOverlayShownAt(Date.now());
+    }
+  }, [showHomeOverlay]);
 
   // Idle animation loop (calls main draw for floating bird)
   useEffect(() => {
@@ -589,6 +597,13 @@ export default function FlappyBirdGame() {
     }
   }, [started, gameOver]);
 
+  // When game over is triggered, record the time
+  useEffect(() => {
+    if (gameOver) {
+      setGameOverShownAt(Date.now());
+    }
+  }, [gameOver]);
+
   return (
     <div style={{ width: "100vw", height: "100vh", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", background: "#222" }}>
       <div style={{ position: "relative", width: canvasSize.width, height: canvasSize.height }}>
@@ -621,9 +636,11 @@ export default function FlappyBirdGame() {
               pointerEvents: showHomeOverlay ? "auto" : "none",
             }}
             onClick={() => {
+              if (Date.now() - homeOverlayShownAt < 300) return;
               setStarted(true); setGameOver(false); setScore(0);
             }}
             onTouchEnd={() => {
+              if (Date.now() - homeOverlayShownAt < 300) return;
               setStarted(true); setGameOver(false); setScore(0);
             }}
           >
@@ -656,6 +673,8 @@ export default function FlappyBirdGame() {
         )}
         {/* Game Over Overlay */}
         {gameOver && (
+          (() => { console.log('Rendering game over overlay', { gameOver, started }); return null; })()
+          ||
           <div
             data-testid="game-over-overlay"
             style={{
@@ -677,11 +696,17 @@ export default function FlappyBirdGame() {
               transitionProperty: "opacity, transform",
               textAlign: "center",
             }}
-            onClick={() => {
+            onClick={e => {
+              e.stopPropagation();
+              if (Date.now() - gameOverShownAt < 500) return;
               setGameOver(false); setStarted(false); setScore(0); // Go to home, do not start game
+              console.log('Game over overlay clicked, resetting to home');
             }}
-            onTouchEnd={() => {
+            onTouchEnd={e => {
+              e.stopPropagation();
+              if (Date.now() - gameOverShownAt < 500) return;
               setGameOver(false); setStarted(false); setScore(0); // Go to home, do not start game
+              console.log('Game over overlay touchend, resetting to home');
             }}
           >
             {/* Flappy Bird Logo above game over image, smaller */}

@@ -24,4 +24,31 @@ test.describe('Flappy Bird Game', () => {
     // After restart, the home overlay should be visible and the game should not start automatically
     await expect(page.getByTestId('start-overlay')).toBeVisible();
   });
+
+  test('mobile double tap on game over overlay does NOT start game automatically', async ({ page }) => {
+    await page.goto('http://localhost:3001/');
+    await page.setViewportSize({ width: 375, height: 667 }); // iPhone 8 size
+    await page.waitForSelector('canvas', { state: 'visible' });
+    // Start the game
+    await page.getByTestId('start-overlay').click();
+    // Simulate jumps to pass a pipe
+    for (let i = 0; i < 10; i++) {
+      await page.mouse.click(200, 300);
+      await page.waitForTimeout(200);
+    }
+    // Let the bird fall and trigger game over
+    await page.waitForTimeout(4000);
+    await page.screenshot({ path: 'snapshot/game-over-debug.png' });
+    await expect(page.getByTestId('game-over-overlay')).toBeVisible();
+    // Simulate double tap on game over overlay
+    const overlay = await page.getByTestId('game-over-overlay');
+    await overlay.dispatchEvent('touchend');
+    await page.waitForTimeout(50);
+    await overlay.dispatchEvent('touchend');
+    // After double tap, the home overlay should be visible and the game should NOT start automatically
+    await expect(page.getByTestId('start-overlay')).toBeVisible();
+    // Wait a bit and check that the game did NOT start
+    await page.waitForTimeout(500);
+    await expect(page.getByTestId('start-overlay')).toBeVisible();
+  });
 }); 
