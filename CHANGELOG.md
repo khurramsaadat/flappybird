@@ -26,6 +26,12 @@
 - Added pulsing animation to "TAP TO START" overlay.
 - Best score now persists using localStorage.
 
+## 2025-06-03
+- Implemented a smooth, looping idle bird animation (sine wave, 5s loop, amplitude scales with bird size).
+- Enforced minimum pipe gap (bird height x 6) for both horizontal and vertical gaps on mobile devices for better playability.
+- Added clear comments in code for easy tweaking of these values.
+- Checked and resolved all Problems tab and terminal issues before and after changes.
+
 ### Directory and File Structure
 
 - .next/

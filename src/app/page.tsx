@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, useCallback } from "react";
 import Image from "next/image";
+import React from "react";
 
 type CanvasWithRestartBtn = HTMLCanvasElement & {
   _restartBtn?: { x: number; y: number; w: number; h: number };
@@ -47,6 +48,46 @@ if (typeof window !== 'undefined' && !document.getElementById('pulse-keyframes')
   document.head.appendChild(style);
 }
 
+// Generic Float component for smooth sine wave floating
+function Float({
+  children,
+  amplitude = 16,
+  period = 300,
+  style = {},
+  className = "",
+}: {
+  children: React.ReactNode;
+  amplitude?: number;
+  period?: number;
+  style?: React.CSSProperties;
+  className?: string;
+}) {
+  const [frame, setFrame] = useState(0);
+  useEffect(() => {
+    let animId: number;
+    let running = true;
+    function animate() {
+      if (!running) return;
+      setFrame(f => (f + 1) % period);
+      animId = requestAnimationFrame(animate);
+    }
+    animate();
+    return () => {
+      running = false;
+      cancelAnimationFrame(animId);
+    };
+  }, [period]);
+  const y = Math.sin((frame / period) * 2 * Math.PI) * amplitude;
+  return (
+    <div style={{ transform: `translateY(${y}px)`, ...style }} className={className}>
+      {children}
+    </div>
+  );
+}
+
+// Debug flag for pipe gap overlay
+const DEBUG_PIPE_GAP = false;
+
 export default function FlappyBirdGame() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [score, setScore] = useState(0);
@@ -65,10 +106,16 @@ export default function FlappyBirdGame() {
   const height = (lockedCanvasSize ?? canvasSize).height;
   const gravity = 0.35 * (height / 600);
   const jump = -6 * (height / 600);
-  const birdSize = 40 * (height / 600);
+  const birdSize = 40 * (height / 600); // Bird height in px (scales with screen)
   const pipeWidth = 60 * (height / 600);
-  const pipeGap = 200 * (height / 600);
+  const pipeGap = 200 * (height / 600); // Default vertical gap between pipes
   const groundHeight = 60 * (height / 600);
+
+  // --- PIPE GAP LOGIC (Mobile) ---
+  // On mobile, enforce minimum horizontal and vertical gap between pipes as bird height x 6
+  // These values are easy to tweak for future adjustments
+  const minPipeGap = birdSize * 6; // Minimum vertical gap between top and bottom pipes
+  const minPipeHorizontalGap = birdSize * 6; // Minimum horizontal distance between pipes
 
   // Game state
   const birdY = useRef(height / 2);
@@ -170,6 +217,14 @@ export default function FlappyBirdGame() {
         ctx.fillStyle = isGreen ? "#4ec04e" : "#d2691e";
         ctx.fillRect(pipe.x, bottomPipeY, pipeWidth, bottomPipeHeight);
       }
+      // Debug overlay for pipe gap
+      if (DEBUG_PIPE_GAP) {
+        ctx.save();
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = "#ff00ff";
+        ctx.fillRect(pipe.x, pipe.top, pipeWidth, minPipeGap);
+        ctx.restore();
+      }
     });
     // Bird rotation: 30deg clockwise when falling, 30deg counterclockwise when rising
     const birdCenterX = width / 4;
@@ -177,7 +232,8 @@ export default function FlappyBirdGame() {
     let angle = birdAngle.current;
     // Idle floating effect
     if (!started && !gameOver) {
-      birdCenterY = height / 2 + Math.sin(idleFrame / 20) * 16;
+      // 5s loop, amplitude scales with bird size
+      birdCenterY = height / 2 + Math.sin((idleFrame / 300) * 2 * Math.PI) * (birdSize * 0.4);
       angle = 0; // No rotation in idle
     }
     ctx.save();
@@ -210,15 +266,17 @@ export default function FlappyBirdGame() {
     setScore(0);
     birdY.current = height / 2;
     birdV.current = 0;
-    let pipeSpeed = 5.0;
+    let pipeSpeed = 3.0;
     function randomPipeColor() {
       return Math.random() < 0.5 ? "green" : "red";
     }
-    const minGap = birdSize * 6;
-    const minHorizontalGap = birdSize * 6;
+    // Use min gaps for mobile, otherwise use default scaling
+    const verticalGap = isMobile ? minPipeGap : pipeGap;
+    const horizontalGap = isMobile ? minPipeHorizontalGap : pipeGap;
+    // Strictly enforce horizontal gap between pipes
     pipes.current = [
-      { x: width + 100, top: Math.max(60, Math.random() * (height - minGap - groundHeight - 100) + 50), color: randomPipeColor(), passed: false },
-      { x: width + 100 + minHorizontalGap, top: Math.max(60, Math.random() * (height - minGap - groundHeight - 100) + 50), color: randomPipeColor(), passed: false },
+      { x: width + 100, top: Math.max(60, Math.random() * (height - verticalGap - groundHeight - 100) + 50), color: randomPipeColor(), passed: false },
+      { x: width + 100 + horizontalGap, top: Math.max(60, Math.random() * (height - verticalGap - groundHeight - 100) + 50), color: randomPipeColor(), passed: false },
     ];
     startedRef.current = true;
     gameOverRef.current = false;
@@ -229,11 +287,11 @@ export default function FlappyBirdGame() {
     function update() {
       if (!running) return;
       if (score >= 20) {
-        pipeSpeed = 7.0;
+        pipeSpeed = 5.0;
       } else if (score >= 10) {
-        pipeSpeed = 5.25;
+        pipeSpeed = 4.0;
       } else {
-        pipeSpeed = 3.5;
+        pipeSpeed = 3.0;
       }
       birdV.current += gravity;
       birdY.current += birdV.current;
@@ -255,9 +313,12 @@ export default function FlappyBirdGame() {
       });
       if (pipes.current[0].x < -pipeWidth) {
         pipes.current.shift();
+        // Enforce horizontal and vertical gap for new pipe
+        const lastPipe = pipes.current[pipes.current.length - 1];
+        let newX = lastPipe.x + horizontalGap;
         pipes.current.push({
-          x: width,
-          top: Math.max(60, Math.random() * (height - minGap - groundHeight - 100) + 50),
+          x: newX,
+          top: Math.max(60, Math.random() * (height - verticalGap - groundHeight - 100) + 50),
           color: Math.random() < 0.5 ? "green" : "red",
           passed: false
         });
@@ -276,7 +337,7 @@ export default function FlappyBirdGame() {
         if (
           birdBox.x + birdBox.w > pipe.x &&
           birdBox.x < pipe.x + pipeWidth &&
-          (birdBox.y < pipe.top || birdBox.y + birdBox.h > pipe.top + minGap)
+          (birdBox.y < pipe.top || birdBox.y + birdBox.h > pipe.top + verticalGap)
         ) {
           gameOverRef.current = true;
           startedRef.current = false;
@@ -492,7 +553,9 @@ export default function FlappyBirdGame() {
     let running = true;
     function animate() {
       if (!running) return;
-      setIdleFrame(frame);
+      // 5s loop: 60fps * 5s = 300 frames
+      // Sine wave for smooth up/down, amplitude scales with bird size
+      setIdleFrame(frame % 300); // Loop every 5s
       frame++;
       draw(); // Call the main draw function so all logic is in one place
       animId = requestAnimationFrame(animate);
@@ -541,24 +604,6 @@ export default function FlappyBirdGame() {
           height={canvasSize.height}
           tabIndex={0}
           style={{ display: "block", background: "#000", width: canvasSize.width, height: canvasSize.height }}
-          onClick={() => {
-            const btn = (canvasRef.current as CanvasWithRestartBtn)?._restartBtn;
-            if (gameOver && btn) {
-              setStarted(true); setGameOver(false); setScore(0);
-            } else if (!started) {
-              setStarted(true); setGameOver(false); setScore(0);
-            } else if (started) {
-              handleJump();
-            }
-          }}
-          onTouchEnd={() => {
-            const now = Date.now();
-            if (now - lastTap < 400) {
-              setStarted(true); setGameOver(false); setScore(0);
-            }
-            setLastTap(now);
-            if (started) handleJump();
-          }}
         />
         {/* Home/Start Overlay */}
         {showHomeOverlay && (
@@ -716,6 +761,12 @@ export default function FlappyBirdGame() {
               Double tap to restart
             </div>
           </div>
+        )}
+        {/* Bird in idle state */}
+        {!started && !gameOver && (
+          <Float amplitude={birdSize * 0.4} period={300} style={{ position: 'absolute', left: width / 4 - birdSize / 2, top: height / 2 - birdSize / 2, zIndex: 5 }}>
+            <img src="/flappy.png" alt="Bird" width={birdSize} height={birdSize} style={{ width: birdSize, height: birdSize }} />
+          </Float>
         )}
       </div>
     </div>
