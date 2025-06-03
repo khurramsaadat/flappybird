@@ -257,7 +257,7 @@ export default function FlappyBirdGame() {
       ctx.fillStyle = "#b0a14f";
       ctx.fillRect(0, height - groundHeight, width, 10);
     }
-  }, [width, height, birdSize, pipeWidth, pipeGap, groundHeight, started, gameOver, idleFrame]);
+  }, [width, height, birdSize, pipeWidth, pipeGap, groundHeight, started, gameOver, idleFrame, minPipeGap]);
 
   // Game loop
   useEffect(() => {
@@ -315,7 +315,7 @@ export default function FlappyBirdGame() {
         pipes.current.shift();
         // Enforce horizontal and vertical gap for new pipe
         const lastPipe = pipes.current[pipes.current.length - 1];
-        let newX = lastPipe.x + horizontalGap;
+        const newX = lastPipe.x + horizontalGap;
         pipes.current.push({
           x: newX,
           top: Math.max(60, Math.random() * (height - verticalGap - groundHeight - 100) + 50),
@@ -429,7 +429,7 @@ export default function FlappyBirdGame() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [gameOver, handleJump]);
+  }, [gameOver, handleJump, handleStart]);
 
   // Responsive canvas scaling
   useEffect(() => {
