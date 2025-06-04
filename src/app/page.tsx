@@ -673,8 +673,6 @@ export default function FlappyBirdGame() {
         )}
         {/* Game Over Overlay */}
         {gameOver && (
-          (() => { console.log('Rendering game over overlay', { gameOver, started }); return null; })()
-          ||
           <div
             data-testid="game-over-overlay"
             style={{
@@ -700,13 +698,11 @@ export default function FlappyBirdGame() {
               e.stopPropagation();
               if (Date.now() - gameOverShownAt < 500) return;
               setGameOver(false); setStarted(false); setScore(0); // Go to home, do not start game
-              console.log('Game over overlay clicked, resetting to home');
             }}
             onTouchEnd={e => {
               e.stopPropagation();
               if (Date.now() - gameOverShownAt < 500) return;
               setGameOver(false); setStarted(false); setScore(0); // Go to home, do not start game
-              console.log('Game over overlay touchend, resetting to home');
             }}
           >
             {/* Flappy Bird Logo above game over image, smaller */}
@@ -752,7 +748,7 @@ export default function FlappyBirdGame() {
             <div style={{
               color: "#d6b4ff",
               fontWeight: 900,
-              fontSize: Math.round(canvasSize.height * 0.045 * 0.55),
+              fontSize: Math.round(canvasSize.height * 0.014),
               margin: "8px 0 16px 0",
               textAlign: "center",
               display: "flex",
@@ -772,24 +768,30 @@ export default function FlappyBirdGame() {
               width: "100%",
               textAlign: "center",
               color: "#fff",
-              fontSize: Math.round(canvasSize.height * 0.018),
+              fontSize: Math.round(canvasSize.height * 0.009),
               letterSpacing: 2,
-              fontWeight: 700,
+              fontWeight: 400,
               textTransform: "uppercase",
               opacity: 0.85,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               gap: 4,
+              fontFamily: "var(--font-press-start-2p)",
             }}>
               <span>MADE WITH</span>
-              <span style={{ color: "#ff3b3b", fontSize: Math.round(canvasSize.height * 0.018) }}>❤️</span>
+              <span style={{
+                color: "#ff3b3b",
+                fontSize: Math.round(canvasSize.height * 0.012),
+                lineHeight: 1,
+                verticalAlign: "middle"
+              }}>❤️</span>
               <span>KHURRAM</span>
             </div>
             <div
               style={{
                 color: "#ffe066",
-                fontWeight: 700,
+                fontWeight: 800,
                 fontSize: Math.round(canvasSize.height * 0.03 * 0.85),
                 animation: "pulse 1.2s infinite cubic-bezier(0.4,0,0.2,1)",
                 willChange: "transform, opacity",
